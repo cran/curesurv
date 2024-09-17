@@ -1,0 +1,32 @@
+#' @title trigamma function
+#'
+#' @param z positive parameter
+#'
+#' @keywords internal
+
+trigamma <- function(z) {
+  if (any(z <= 0))
+    stop("Trigamma requires positive arguments")
+  k <- length(z)
+  z <- matrix(z, ncol = 1)
+  j <- max(0, ceiling(13 - min(z)))
+  z1 <- z + j
+  p <- 1 / z1 +
+    1 / (2 * z1 ^ 2) +
+    1 / (6 * z1 ^ 3) -
+    1 / (30 * z1 ^ 5) +
+    1 / (42 * z1 ^ 7) -
+    1 / (30 * z1 ^ 9) +
+    1 / (66 * z1 ^11)
+  if (j > 0) {
+    i <- 0:(j - 1)
+    if (j == 1)
+      p <- p + 1 / z ^ 2
+    else
+      p <- p + apply((z %*% matrix(1, 1, j) +
+                        matrix(1, prod(k), 1) %*% matrix(i, 1, j)) ^ (-2),
+                     1,
+                     sum)
+    }
+  as.numeric(p)
+}

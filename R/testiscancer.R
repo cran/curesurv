@@ -1,0 +1,30 @@
+#' Simulated testis cancer data using a cure model
+#'
+#' Simulated dataset of 2000 individuals as in Boussari et \emph{al}. (2020),
+#' following setting 1 sub-scenario design.
+#'
+#'
+#' @docType data
+#'
+#' @usage data(testiscancer)
+#'
+#' @format This dataset contains the following variables:
+#' \describe{
+#'  \item{age}{Age at diagnosis}
+#'  \item{age_cr}{centered and scaled age at diagnosis}
+#'  \item{age_classe}{"<40", "40_65" and  ">=65" age groups }
+#'  \item{time_obs}{Follow-up time (years)}
+#'  \item{event}{Vital status}
+#'  \item{cumehazard}{individual cumulative expected hazard}
+#'  \item{ehazard}{individual instantaneous expected hazard}
+#'  \item{weisurvpop}{individual expected survival}
+#' }
+#'
+#'
+#' @keywords datasets
+#'
+#'
+#' @examples
+#' data(testiscancer)
+#' summary(testiscancer)
+"testiscancer"

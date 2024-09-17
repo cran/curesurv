@@ -1,0 +1,444 @@
+---
+title: "How to estimate a new mixture cure model for increased risk of non cancer death"
+author: "Juste Goungounga, Judith Breaud, Laura Botta, Riccardo Capocaccia, Gaelle Romain, Marc Colonna, Gemma Gatta, Olayidé Boussari, and Valérie Jooste"
+output: 
+  rmarkdown::html_document:
+      theme: paper 
+      toc: true
+      toc_float: true
+bibliography: fichier.bib
+vignette: >
+  %\VignetteIndexEntry{How to estimate a new mixture cure model for increased risk of non cancer death}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+# Introduction
+
+`curesurv` is an R-package to fit a variaty of cure models using excess hazard modelling methodology. It can be a mixture cure model with the survival of uncured patients following a Weibull (Botta et al. 2023, BMC Medical Research Methodology). The package also implements non-mixture cure models such as the time-to-null excess hazard model proposed by Boussari et al (2021) [@boussari2021modeling].
+If the modelling assumption of comparability between the expected hazard in the study cohort and the general population doesn't hold, an extra effect (due to life table mismatch) can be estimated for these two classes of cure models. In the following we will only be interested by mixture cure models implemented in the `curesurv` R-package.
+
+For more details regarding mixture cure models in net survival setting please read the methods section in the article untitled: "A new cure model that corrects for increased risk of non-cancer death. Analysis of reliability and robustness, and application to real-life data" in BMC medical research methodology.
+
+
+# Installation
+
+The latest version of `curesurv` can be installed using the tar.gz version of the R-package uploaded to the journal website using the following r script: 
+
+```{r, eval=FALSE}
+install.packages("curesurv_0.1.0.tar.gz",
+                 repos = NULL,
+                 type = "source")
+```
+
+
+`curesurv` depends on the `stringr` and `survival` R packages, which can be installed directly from CRAN.
+
+It also uses other R packages that can be imported, such as: `numDeriv`, `stats`, `randtoolbox`, `bbmle`, `optimx`, `Formula`, `Deriv`, `statmod`, and `xhaz`.
+
+Once these other packages are installed, load the `curesurv` R package.
+
+
+```{r}
+library(xhaz)
+library(survexp.fr)
+library(curesurv)
+```
+
+# Fitting a classical mixture cure model in excess hazard modelling setting (M0)
+
+We illustrate the fitting of mixture cure models using a simulated dataset named `testiscancer`. This dataset is available in the `curesurv` package. It consists of 2,000 patients with information on their age, follow-up time, and vital status. The patients are assumed to be male and diagnosed in 2000-01-01 for a testis cancer. The French life table in the R package `survexp.fr` can be used as the mortality table of the French general population for illustration purposes.
+
+## Importing the dataset
+
+```{r}
+# We had these information in the dataset
+data("testiscancer", package = "curesurv")
+
+head(testiscancer)
+
+dim(testiscancer)
+testiscancer$sex <- "male"
+levels(testiscancer$sex) <- c("male", "female")
+testiscancer$year <- as.Date("2000-01-01")
+```
+
+## Extracting the population background mortality from the French life table 
+
+Here we show how to extract background mortality information from `survexp.fr` [-@jais2022package], the life table for France available in the eponymous R package.
+
+```{r}
+
+attributes(survexp.fr)
+
+
+fit.haz <- exphaz(
+    formula = Surv(time_obs, event) ~ 1,
+    data = testiscancer,
+    ratetable = survexp.fr,
+    only_ehazard = FALSE,
+    rmap = list(age = 'age',
+                sex = 'sex', 
+                year = 'year'))
+```
+
+The testiscancer database already has instantaneous population hazard and cumulative population hazard. Otherwise, it would be possible to obtain them from `fit.haz$ehazard` and `fit.haz$ehazardInt`
+
+```{r}
+#instantaneous population hazard
+testiscancer$haz <- testiscancer$ehazard
+#cumulative population hazard
+testiscancer$cumhaz <- testiscancer$cumehazard
+
+```
+
+
+## Fitting a conventional mixture cure model with the uncured survival following a Weibull distribution
+
+
+We fit a mixture cure model in the excess hazard modeling setting. We assume that reduced and centered age affect the cure rate through a logistic link function and uncured survival proportionally [@de1999mixture]. 
+
+
+```{r}
+fit_mod0 <- curesurv(Surv(time_obs, event) ~ age_cr | age_cr,
+                   pophaz = "haz",
+                   cumpophaz = "cumhaz",
+                   model = "mixture", dist = "weib",
+                   data = testiscancer,
+                   method_opt = "L-BFGS-B")
+
+fit_mod0
+
+```
+
+We found that the effect of reduced and centered age on survival of uncured patients was 0.29 with a standard error of 0.08.
+The cure rates and their 95% confidence intervals for patients 51.05 and 70.01 years of age (representing individuals with the average age in the study cohort and that of individuals whose age corresponds to an increase of one unit of reduced centered age) were 77.67% [74.76; 80.60] and 51.15% [46.20; 56.10], respectively. 
+
+
+
+# Fitting a new mixture cure model with the uncured survival (M1) allowing the background mortality to be corrected
+
+We fit a new mixture cure model in the excess hazard modelling setting proposed by Botta et al. 2023. It allows the background mortality to be corrected using the argument `pophaz.alpha = TRUE`, in order to account for increased non-cancer mortality as in [@phillips2002estimating]. As previously, the new model assumes that reduced and centered age affects the cure rate through a logistic link function and the uncured survival proportionally. This model was presented at the 15th Francophone Conference on Clinical Epidemiology (EPICLIN) and at the 28th Journées des statisticiens des centres anticancéreux (CLCC), in Marseille, France [@BOTTA2021S24]. 
+
+
+```{r}
+fit_mod1 <- curesurv(Surv(time_obs, event) ~ age_cr | age_cr,
+                   pophaz = "haz",
+                   cumpophaz = "cumhaz",
+                   model = "mixture", dist = "weib",
+                   data = testiscancer, 
+                   pophaz.alpha = TRUE,
+                   method_opt = "L-BFGS-B")
+
+fit_mod1
+
+```
+
+We found that the effect of reduced and centered age on survival of uncured patients was higher in the new model and was 0.35 with a standard error of 0.13.
+The cure rates and their 95% confidence intervals for patients 51.05 and 70.01 years of age (representing individuals with the average age in the study cohort and that of individuals whose age corresponds to an increase of one unit of reduced centered age) were also higher with the new mixed cure model, with estimates of 86.73% [83.69; 89.80]% and 81.59% [77.19; 86.00]%, respectively. 
+The new mixture cure model also estimated the increased risk of non-cancer death to be 1.96, with 95% confidence intervals [1.77; 2.14] not including 1. These results support the hypothesis of increased non-cancer mortality in the simulated testicular cancer patients. 
+
+
+
+# How to select the best model
+
+We can compare the output of these two models using Akaike information criteria (AIC).
+
+
+```{r}
+AIC(fit_mod0,fit_mod1)
+```
+
+The best model was the new mixture cure model accounting for increased risk of non-cancer death.
+
+
+# Plot of net survival, excess hazard and probability of being cured for the two models
+
+## Predictions by varying age values
+
+We can be interested in the prediction of excess hazard and net survival. We propose to calculate these predictions of excess hazard and net survival at equal time 2 years since diagnosis, as a function of centered and reduced age ranging from -1.39 to 1.5, which corresponds to age values ranging from 24.69 to 83.48. We also added the curves of P(t), the probability of being cured at a given time t after diagnosis knowing that he/she was alive until the time 2 years since diagnosis [@BOUSSARI201872],which can be obtained from the estimates of these models.
+
+
+
+```{r}
+val_age <- seq(-1.39, 1.8, 0.1)
+newage <- round(val_age * sd(testiscancer$age) + mean(testiscancer$age), 2)
+
+newdata3 <- with(testiscancer,
+                 expand.grid(
+                   event = 0,
+                   age_cr = val_age,
+    time_obs  = 2))
+
+
+pred_age_mod0 <- predict(object = fit_mod0,
+                                  newdata = newdata3)
+
+
+pred_age_mod1 <- predict(object = fit_mod1,
+                                  newdata = newdata3)
+
+```
+
+
+```{r, fig.height=12, fig.width=12}
+oldpar <- par(no.readonly = TRUE)
+
+par(mfrow=c(2,2))
+ plot(newage,
+     pred_age_mod0$ex_haz, type = "l",
+     lty=1, lwd=2,
+     xlab = "age",
+     ylab = "excess hazard")
+ 
+  lines(newage,
+     pred_age_mod1$ex_haz, type = "l",
+     lty=1, lwd=2, col = "blue")
+  
+legend("topleft", 
+       legend = c("M0",
+                  "M1"),
+       lty = c(1,1),
+       lwd = c(2,2),
+       col = c("black", "blue"))
+grid()
+
+ plot(newage,
+     pred_age_mod0$netsurv , type = "l", lty=1,
+     lwd=2, xlab = "age", ylab = "net survival")
+ 
+ lines(newage,
+     pred_age_mod1$netsurv , type = "l", lty=1,
+     lwd=2, col = "blue")
+     grid()
+legend("bottomleft", 
+       legend = c("M0",
+                  "M1"),
+       lty = c(1,1),
+       lwd = c(2,2),
+       col = c("black", "blue"))
+     
+ plot(newage,
+     pred_age_mod0$pt_cure, type = "l", lty=1, lwd=2,
+     xlab = "age",
+     ylab = "P(t)")
+     grid()
+     
+ lines(newage,
+     pred_age_mod1$pt_cure, type = "l", lty=1, lwd=2,
+     xlab = "age", col = "blue")
+     grid()
+legend("bottomleft", 
+       legend = c("M0",
+                  "M1"),
+       lty = c(1,1),
+       lwd = c(2,2),
+       col = c("black", "blue"))
+par(oldpar)
+```
+
+
+
+## Predictions by varying time since diagnosis and for age 50 and 70
+
+We propose to calculate these predictions of excess hazard and net survival at varying time since diagnosis, and at fixed age 50 and 70, the median and 3rd quartile. We also added the curves of P(t), the probability of being cured at a given time t after diagnosis knowing that he/she was alive until the time t since diagnosis [@BOUSSARI201872],which can be obtained from the estimates of these models.
+
+
+
+```{r}
+
+age50 <- c(50)
+agecr50 <- (age50 - mean(testiscancer$age))/sd(testiscancer$age) 
+
+age70 <- c(70)
+agecr70 <- (age70 - mean(testiscancer$age))/sd(testiscancer$age) 
+
+time <- seq(0.1, 15, 0.1)
+
+newdata_age50 <- with(testiscancer,
+                 expand.grid(
+                   event = 0,
+                   age_cr = agecr50,
+                   time_obs  = time))
+
+newdata_age70 <- with(testiscancer,
+                 expand.grid(
+                   event = 0,
+                   age_cr = agecr70,
+                   time_obs  = time))
+
+
+pred_age50_mod0 <- predict(object = fit_mod0,
+                                  newdata = newdata_age50)
+
+pred_age70_mod0 <- predict(object = fit_mod0,
+                                  newdata = newdata_age70)
+
+
+
+pred_age50_mod1 <- predict(object = fit_mod1,
+                                  newdata = newdata_age50)
+
+pred_age70_mod1 <- predict(object = fit_mod1,
+                                  newdata = newdata_age70)
+
+
+```
+
+It is possible to plot these predictions directly using plot. With `fun` parameter you can choose between `fun="all"` which plot excess hazard, net survival and probability of being cured knowing patient is alive, `fun="haz"` which plot excess hazard, `fun="surv"` which plots net survival, `fun="pt_cure"` which plots probability of being cured at t knowing patient is alive at t, `fun="cumhaz"` for cumulative excess hazard and `fun="logcumhaz"` for logairthm of cumulativ excess hazard. For `fun="surv"`, `fun="haz"`, `fun="pt_cure"` and `fun="logcumhaz"` it is also possible to include confidence interval using `conf.int=TRUE`. These options are shown below
+
+```{r, fig.height=12, fig.width=12}
+plot(pred_age50_mod0, fun="all",conf.int=FALSE,lwd.main = 2,lwd.sub = 2)
+
+
+```
+
+```{r}
+plot(pred_age50_mod0, fun="haz",conf.int=TRUE,conf.type="plain")
+
+plot(pred_age50_mod0, fun="surv",conf.int=TRUE,conf.type="log-log")
+
+plot(pred_age50_mod0, fun="pt_cure",conf.int=TRUE,conf.type="log")
+
+plot(pred_age50_mod0, fun="cumhaz",conf.int=FALSE)
+
+plot(pred_age50_mod0, fun="logcumhaz",conf.int=TRUE,conf.type="plain")
+
+```
+
+This plot function specific for curesurv predictions can be very useful, however it only works for time varying (other variable fixed) predictions, and it doesn't allow comparison between models. For this reason we also show how to plot predictions from different models in one figure :
+
+```{r, fig.height=12, fig.width=12}
+
+par(mfrow=c(2,2))
+plot(
+  time,
+  pred_age50_mod0$ex_haz,
+  type = "l",
+  lty = 1,
+  lwd = 2,
+  xlab = "time since diagnosis (years)",
+  ylab = "excess hazard", ylim = c(0,0.20))
+
+lines(
+  time,
+  pred_age50_mod1$ex_haz,
+  type = "l", col = "blue",
+  lty = 1,
+  lwd = 2)
+
+lines(
+  time,
+  pred_age70_mod0$ex_haz,
+  type = "l",
+  lty = 2,
+  lwd = 2)
+
+lines(
+  time,
+  pred_age70_mod1$ex_haz,
+  type = "l", col = "blue",
+  lty = 2,
+  lwd = 2)
+grid()
+
+legend("topright", 
+       legend = c("M0 - age = 50",
+                  "M1 - age = 50",
+                  "M0- age = 70",
+                  "M1- age = 70"),
+       lty = c(1,1,2,2),
+       lwd = c(2,2,2,2),
+       col = c("black", "blue", "black", "blue"))
+plot(time,
+     pred_age50_mod0$netsurv , type = "l", lty=1,
+     lwd=2,
+     xlab = "time since diagnosis (years)",
+     ylab = "net survival",
+     ylim = c(0,1))
+ 
+lines(time,
+     pred_age50_mod1$netsurv , type = "l", lty=1,
+     lwd=2, col = "blue")
+     
+     
+     
+lines(time,
+     pred_age70_mod0$netsurv , type = "l", lty=2,
+     lwd=2)
+
+ 
+lines(time,
+     pred_age70_mod1$netsurv , type = "l", lty=2,
+     lwd=2, col = "blue")
+     grid()
+     
+legend("bottomleft", 
+       legend = c("M0 - age = 50",
+                  "M1 - age = 50",
+                  "M0- age = 70",
+                  "M1- age = 70"),
+       lty = c(1,1,2,2),
+       lwd = c(2,2,2,2),
+       col = c("black", "blue", "black", "blue"))
+
+plot(time,
+     pred_age50_mod0$pt_cure,
+     type = "l", lty=1, lwd=2,
+     xlab = "time since diagnosis (years)",
+     ylab = "P(t)", 
+     ylim = c(0,1))
+     grid()
+     
+ lines(time,
+     pred_age50_mod1$pt_cure,
+     type = "l", lty=1, lwd=2,
+     xlab = "age", col = "blue")
+
+ lines(time,
+     pred_age70_mod0$pt_cure,
+     type = "l", lty=2, lwd=2)
+ 
+ lines(time,
+     pred_age70_mod1$pt_cure,
+     type = "l", lty=2, lwd=2,
+     xlab = "age", col = "blue")
+     grid()
+legend("bottomright", 
+       legend = c("M0 - age = 50",
+                  "M1 - age = 50",
+                  "M0- age = 70",
+                  "M1- age = 70"),
+       lty = c(1,1,2,2),
+       lwd = c(2,2,2,2),
+       col = c("black", "blue", "black", "blue"))
+
+par(oldpar)
+```
+
+# Session info
+
+```{r}
+date()
+
+sessionInfo()
+```
+
+
+# License
+
+GPL 3.0, for academic use.
+
+# Acknowledgments
+
+We are grateful to the "Fondation ARC pour la recherche sur le cancer" for its support of this work.
+
+
+# References 

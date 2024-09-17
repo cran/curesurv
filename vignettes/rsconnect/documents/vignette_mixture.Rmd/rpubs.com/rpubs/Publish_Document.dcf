@@ -1,0 +1,11 @@
+name: Publish_Document
+title:
+username:
+account: rpubs
+server: rpubs.com
+hostUrl: rpubs.com
+appId: https://api.rpubs.com/api/v1/document/994890/2c291c407d8542c68efa07ee4eed8634
+bundleId: https://api.rpubs.com/api/v1/document/994890/2c291c407d8542c68efa07ee4eed8634
+url: http://rpubs.com/Goungounga/994890
+when: 1674578700.01613
+lastSyncTime: 1674578700.01615

@@ -1,0 +1,40 @@
+citHeader("To cite curesurv in publications use:")
+
+ year <- "2023"
+ vers <- note <- sprintf(" R package version %s", meta$Version)
+
+bibentry(
+  bibtype    = "Manual",
+  title    = "curesurv: Mixture and Non Mixture Parametric Cure Models to Estimate Cure Indicators Including Time-to-Cure, Cure Proportion and Net Survival",
+       doi = "10.5281/zenodo.7549214",
+  author   = c(as.person("Juste GOUNGOUNGA"),
+  as.person("Olayidé BOUSSARI"),
+  as.person("Laura BOTTA"),
+  as.person("Valérie JOOSTE")),
+     year = year,
+     note = vers,
+       textVersion = paste0("Juste GOUNGOUNGA, Olayidé BOUSSARI, Laura BOTTA, Valérie JOOSTE, (", year, ").",
+  "curesurv: Mixture and Non Mixture Parametric Cure Models to Estimate Cure Indicators Including Time-to-Cure, Cure Proportion and Net Survival.",
+  note, ". Zenodo",
+  ". DOI: 10.5281/zenodo.7549214. https://CRAN.R-project.org/package=curesurv")
+)
+
+
+
+bibentry(bibtype = "Manual",
+         title = "{curesurv}: Mixture and Non Mixture Parametric Cure Models to Estimate Cure Indicators Including Time-to-Cure, Cure Proportion and Net Survival.",
+         author = c(as.person("Juste Goungounga"),
+                        as.person("Olayidé BOUSSARI"),
+                        as.person("Laura BOTTA"),
+                        as.person("Valérie JOOSTE")),
+         year = year,
+         note = note,
+    publisher = "Zenodo",
+          doi = "10.5281/zenodo.7549214",
+	        url = "https://CRAN.R-project.org/package=curesurv")
+
+textVersion = paste0("Juste Goungounga, Olayidé BOUSSARI, Laura BOTTA, Valérie JOOSTE, (", year,").",
+"curesurv: Mixture and Non Mixture Parametric Cure Models to Estimate Cure Indicators Including Time-to-Cure, Cure Proportion and Net Survival.",
+  note, ". Zenodo",
+  ". DOI: 10.5281/zenodo.7549214. https://CRAN.R-project.org/package=curesurv")
+
